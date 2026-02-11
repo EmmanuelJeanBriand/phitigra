@@ -485,7 +485,7 @@ class GraphEditor():
         for e in self.graph.edge_iterator(labels=False):
             self.set_edge_color(e, c)
 
-        if self.graph.get_pos() is None:
+        if self._get_graph_pos() is None:
             # The graph has no predefined positions: we pick some
             self.graph.layout(layout='spring', save_pos=True)
 
@@ -775,6 +775,33 @@ class GraphEditor():
         else:
             self._edge_colors[(v, u)] = color
 
+    def _get_graph_pos(self):
+        """
+        Return the dictionary of positions of the vertices of the graph.
+
+        NOTES:
+        
+        Substitute for ``.graph.get_pos``. Introduced  in order to fix
+        <https://github.com/jfraymond/phitigra/issues/3>.
+        
+        In Sage < 9.7, ``G.get_pos()`` always returns attribute 
+        ``._pos`` of a graph without modifying it. 
+        In Sage >= 9.7, ``.get_pos()`` sets  ``._pos`` to ``None``
+        when the keys of `._pos`` do not correspond to the
+        vertices of the graph. This change broke phitigra. 
+       
+        TESTS::
+
+            sage: from phitigra import GraphEditor
+            sage: G = Graph(2)
+            sage: G.plot(pos={0: (0, 0), 1: (2, 3)}, save_pos=True)
+            sage: ed = GraphEditor(G)
+            sage: p = ed._get_graph_pos()
+            sage: p == G.get_pos()
+            True
+        """
+        return self.graph._pos
+    
     def get_vertex_pos(self, v):
         """
         Return the vertex coordinates.
@@ -788,7 +815,7 @@ class GraphEditor():
             sage: x == 24 and y == 42
             True
         """
-        x, y = self.graph.get_pos()[v]
+        x, y = self._get_graph_pos()[v]
         # -y because the y axis of the canvas goes downwards
         return x, -y
 
@@ -804,7 +831,7 @@ class GraphEditor():
             sage: all(v in p.keys() for v in ed.graph)
             True
         """
-        p = self.graph.get_pos()
+        p = self._get_graph_pos()
         # -p[v][1] because the y axis of the canvas goes downwards
         return {v: (p[v][0], -p[v][1])
                 for v in self.graph}
@@ -866,7 +893,7 @@ class GraphEditor():
             {0: (10, -10), 1: (20, -20), 2: (30, -5)}
         """
 
-        pos = self.graph.get_pos()
+        pos = self._get_graph_pos()
         if pos is None:
             pos = dict()
             self.graph.set_pos(pos)
@@ -2302,6 +2329,7 @@ class GraphEditor():
             0
         """
         self.graph = Graph(0)
+        self.set_vertices_pos(dict())
         self._select_vertex(redraw=None)
         self.refresh()
         self.output_text("Cleared drawing.")
